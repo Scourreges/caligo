@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/
+
+# Local environments
+.env
+.venv/
+venv/
+*.log
+
+# Generated install metadata
+caligo.egg-info/
+
+# Local run outputs
+outputs/
+run.npz
+history.csv
+*.npz
+*.pkl
+
+# Generated photochem files
+photochem_rxns.yaml
+photochem_thermo.yaml
+
+# Large or externally sourced reference data
+data/Virga_mieff_files/
+data/Transmission_data/
+
+# Exported notebooks/reports
+*.pdfexamples/notebooks/figures.ipynb

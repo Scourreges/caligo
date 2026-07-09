@@ -6,8 +6,8 @@ build-backend = "setuptools.build_meta"
 name = "caligo"
 version = "0.1.0"
 description = "PICASO-style haze microphysics and optical post-processing tools for exoplanet atmospheres."
-readme = "README.md"
-requires-python = ">=3.10,<3.13"
+readme = {file = "README.md", content-type = "text/markdown"}
+requires-python = ">=3.11"
 license = { text = "MIT" }
 
 authors = [
@@ -21,14 +21,13 @@ keywords = [
     "atmospheres",
     "PICASO",
     "photochem",
-    "VIRGA"
+    "VIRGA",
 ]
 
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Astronomy",
@@ -36,18 +35,21 @@ classifiers = [
 ]
 
 dependencies = [
-    "numpy",
+    "numpy>=2.0",
     "scipy",
     "pandas",
     "matplotlib",
     "astropy",
     "pyyaml",
     "miepython",
+    "picaso>=4.0",
+    "virga-exo>=2.0",
 ]
 
 [project.optional-dependencies]
 notebooks = [
     "ipykernel",
+    "jupyter",
 ]
 
 dev = [
@@ -55,11 +57,6 @@ dev = [
     "black",
     "build",
     "pytest",
-]
-
-full = [
-    "picaso",
-    "virga-exo",
 ]
 
 [project.urls]

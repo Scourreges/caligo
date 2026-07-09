@@ -1,19 +1,28 @@
 name: caligo
+
 channels:
   - conda-forge
+
 dependencies:
   - python=3.11
-  - numpy=1.26
-  - scipy=1.13
-  - pandas=2.2
-  - matplotlib=3.10
-  - astropy=7.0
+
+  # Core scientific stack
+  - numpy
+  - scipy
+  - pandas
+  - matplotlib
+  - astropy
   - pyyaml
+
+  # Main science dependencies
+  - photochem
+  - picaso
+  - virga-exo
+  - miepython
+
+  # Notebook and testing tools
   - ipykernel
   - pytest
-  - photochem=0.6.5
+
+  # Needed for editable package install
   - pip
-  - pip:
-      - miepython==3.0.2
-      - picaso==4.0
-      - virga-exo==1.0.0

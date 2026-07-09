@@ -9,9 +9,11 @@ description = "PICASO-style haze microphysics and optical post-processing tools 
 readme = "README.md"
 requires-python = ">=3.10,<3.13"
 license = { text = "MIT" }
+
 authors = [
     { name = "Shelby Courreges" }
 ]
+
 keywords = [
     "exoplanets",
     "haze",
@@ -21,6 +23,7 @@ keywords = [
     "photochem",
     "VIRGA"
 ]
+
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
@@ -29,31 +32,40 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Astronomy",
-    "Topic :: Scientific/Engineering :: Physics"
+    "Topic :: Scientific/Engineering :: Physics",
 ]
 
 dependencies = [
-    "numpy>=1.26,<2.0",
-    "scipy>=1.13,<1.14",
-    "pandas>=2.2,<2.3",
-    "matplotlib>=3.10,<3.11",
-    "astropy>=7.0,<8.0",
-    "pyyaml>=6.0,<7.0",
-    "miepython==3.0.2",
-    "picaso==4.0",
-    "photochem==0.6.5"
+    "numpy",
+    "scipy",
+    "pandas",
+    "matplotlib",
+    "astropy",
+    "pyyaml",
+    "miepython",
 ]
 
 [project.optional-dependencies]
 notebooks = [
-    "ipykernel>=6.29,<7"
+    "ipykernel",
 ]
 
 dev = [
     "ruff",
     "black",
-    "build"
+    "build",
+    "pytest",
 ]
+
+full = [
+    "picaso",
+    "virga-exo",
+]
+
+[project.urls]
+Homepage = "https://github.com/Scourreges/caligo"
+Repository = "https://github.com/Scourreges/caligo"
+Issues = "https://github.com/Scourreges/caligo/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]

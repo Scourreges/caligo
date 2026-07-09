@@ -1,19 +1,19 @@
 name: caligo
 channels:
   - conda-forge
-  - defaults
-
 dependencies:
-  - python=3.12
-  - numpy<2
+  - python=3.11
+  - numpy=1.26
   - scipy=1.13
   - pandas=2.2
   - matplotlib=3.10
   - astropy=7.0
   - pyyaml
   - ipykernel
+  - pytest
+  - photochem=0.6.5
   - pip
   - pip:
       - miepython==3.0.2
       - picaso==4.0
-      - photochem==0.6.5
+      - virga-exo==1.0.0

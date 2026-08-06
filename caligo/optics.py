@@ -1521,7 +1521,7 @@ def compute_tau_contribution_by_bin(
     log_wave = np.log(np.maximum(wavelength_um, 1e-300))
 
     if nwave > 1:
-        tau_by_bin_integrated = np.trapz(tau_by_bin, x=log_wave, axis=1)
+        tau_by_bin_integrated = np.trapezoid(tau_by_bin, x=log_wave, axis=1)
     else:
         tau_by_bin_integrated = tau_by_bin[:, 0].copy()
 
@@ -1659,8 +1659,8 @@ def compare_compact_and_aggregate_optics(
     ratio = tau_aggregate / np.maximum(tau_compact, 1e-300)
 
     if wave.size > 1:
-        int_compact = float(np.trapz(tau_compact, x=np.log(wave)))
-        int_aggregate = float(np.trapz(tau_aggregate, x=np.log(wave)))
+        int_compact = float(np.trapezoid(tau_compact, x=np.log(wave)))
+        int_aggregate = float(np.trapezoid(tau_aggregate, x=np.log(wave)))
     else:
         int_compact = float(tau_compact[0])
         int_aggregate = float(tau_aggregate[0])

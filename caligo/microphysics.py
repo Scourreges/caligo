@@ -636,17 +636,43 @@ def compute_settling_velocity_matrix(ctx, case):
     """
     Compute layer/bin settling velocities with VIRGA's vfall.
 
+    Compact bins use VIRGA's spherical branch.
+    Aggregate-eligible bins use VIRGA's native aggregate branch, with
+    Caligo's compact-equivalent radius, monomer count, Df, and k0.
+
     Returns
     -------
     np.ndarray
         v_set[k, i] in cm/s, positive downward.
     """
     transport_settings = case.transport_settings
+    aggregate_settings = case.aggregate_settings
+
     settling_on = bool(transport_settings.get("settling", True))
     settling_scale = float(transport_settings.get("settling_scale", 1.0))
 
-    nz = ctx["nz"]
-    n_bin = ctx["n_bin"]
+    use_aggregates = bool(aggregate_settings.get("use", True))
+    use_agg_in_settling = bool(
+        aggregate_settings.get(
+            "use_agg_in_settling",
+            aggregate_settings.get("use_in_settling", True),
+        )
+    )
+
+    k0_agg = float(
+        aggregate_settings.get(
+            "k0",
+            aggregate_settings.get("k0_agg", 1.0),
+        )
+    )
+
+    nz = int(ctx["nz"])
+    n_bin = int(ctx["n_bin"])
+
+    rho_haze = float(ctx["rho_haze"])
+    r_compact_cm = np.asarray(ctx["r_compact_cm"], dtype=float)
+    N_primary = np.asarray(ctx["N_primary"], dtype=float)
+    can_be_aggregate = np.asarray(ctx["can_be_aggregate"], dtype=bool)
 
     v_set = np.zeros((nz, n_bin), dtype=float)
 
@@ -661,37 +687,74 @@ def compute_settling_velocity_matrix(ctx, case):
         )
 
     for k in range(nz):
+        df_i_layer = float(ctx["Df_layer"][k])
+
         for i in range(n_bin):
-            r_i = float(ctx["r_drag_layer_cm"][k, i])
-            rho_i = float(ctx["rho_eff_layer"][k, i])
-            df_i = float(ctx["Df_layer"][k])
+            r_i = float(r_compact_cm[i])
+
+            aggregate_drag = (
+                use_aggregates
+                and use_agg_in_settling
+                and bool(can_be_aggregate[i])
+            )
 
             try:
-                vraw = vfall(
-                    r_i,
-                    float(ctx["g_planet"]),
-                    float(ctx["mu"][k]),
-                    float(ctx["mfp"][k]),
-                    float(ctx["visc"][k]),
-                    float(ctx["T"][k]),
-                    float(ctx["Pdyn"][k]),
-                    rho_i,
-                    False,
-                    df_i,
-                    1.0,
-                    r_i,
-                    1.0,
-                )
+                if aggregate_drag:
+                    # VIRGA expects r to be the compact-equivalent radius.
+                    # Supplying N_mon lets VIRGA recover the monomer radius
+                    # from volume conservation, matching Caligo's mass bins.
+                    vraw = vfall(
+                        r_i,
+                        float(ctx["g_planet"]),
+                        float(ctx["mu"][k]),
+                        float(ctx["mfp"][k]),
+                        float(ctx["visc"][k]),
+                        float(ctx["T"][k]),
+                        float(ctx["Pdyn"][k]),
+                        rho_haze,
+                        True,
+                        df_i_layer,
+                        float(N_primary[i]),
+                        None,
+                        k0_agg,
+                    )
 
-                v_set[k, i] = abs(vraw) * settling_scale if np.isfinite(vraw) else 0.0
+                else:
+                    # Compact spherical settling.
+                    vraw = vfall(
+                        r_i,
+                        float(ctx["g_planet"]),
+                        float(ctx["mu"][k]),
+                        float(ctx["mfp"][k]),
+                        float(ctx["visc"][k]),
+                        float(ctx["T"][k]),
+                        float(ctx["Pdyn"][k]),
+                        rho_haze,
+                        False,
+                        3.0,
+                        1.0,
+                        r_i,
+                        1.0,
+                    )
+
+                v_set[k, i] = (
+                    abs(vraw) * settling_scale
+                    if np.isfinite(vraw)
+                    else 0.0
+                )
 
             except Exception as exc:
                 raise RuntimeError(
                     f"VIRGA vfall failed at layer k={k}, bin i={i}, "
-                    f"P={ctx['Pbar'][k]:.3e} bar, r={r_i:.3e} cm."
+                    f"P={ctx['Pbar'][k]:.3e} bar, "
+                    f"r_compact={r_i:.3e} cm, "
+                    f"aggregate_drag={aggregate_drag}."
                 ) from exc
 
     return v_set
+
+
+
 
 
 def settling_diagnostics(ctx):
@@ -762,8 +825,15 @@ def build_microphysics_context(raw_ctx, case):
 
     Kzz_pc = np.asarray(raw_ctx["Kzz_raw"], dtype=float)
 
-    if Kzz_pc.size != Pbar_pc.size:
-        Kzz_pc = np.ones_like(Pbar_pc) * np.nanmedian(Kzz_pc)
+    if Kzz_pc.shape != Pbar_pc.shape:
+        raise ValueError(
+            "Kzz_raw must be defined on the same pressure grid as the "
+            "Photochem result. "
+            f"Got Kzz shape {Kzz_pc.shape} and Pbar_pc shape {Pbar_pc.shape}."
+        )
+
+    if not np.all(np.isfinite(Kzz_pc)):
+        raise ValueError("Kzz_raw contains non-finite values.")
 
     grid_settings = case.microphysics_grid_settings
     p_top_micro = float(grid_settings.get("p_top_micro", 1e-10))
@@ -2312,13 +2382,12 @@ def build_coagulation_kernel(ctx, case=None):
         if use_brownian:
             K_layer += brownian_fuchs_kernel_layer(ctx, k, coag_settings)
 
-            if use_diff_settling:
-                K_layer += differential_settling_kernel_layer(
-                    ctx,
-                    k,
-                    coag_settings=coag_settings,
-                )
-
+        if use_diff_settling:
+            K_layer += differential_settling_kernel_layer(
+                ctx,
+                k,
+                coag_settings=coag_settings,
+            )
         K[k] = kernel_scale * np.maximum(K_layer, 0.0)
 
     ctx["K_coag"] = K
@@ -2736,6 +2805,7 @@ def coagulation_step(n_in, dt, ctx):
         "coag_max_dtl": 0.0,
         "coag_t_done_frac": 1.0,
         "coag_hit_substep_cap": False,
+        "coag_terminated_negligible": False,
         "coag_min_sub_dt": np.inf,
         "coag_max_sub_dt": 0.0,
         "coag_substep_retries": 0,
@@ -2786,11 +2856,15 @@ def coagulation_step(n_in, dt, ctx):
         max_loss = float(np.max(np.where(active, L, 0.0))) if np.any(active) else 0.0
 
         if max_loss <= 0:
+            diag["coag_terminated_negligible"] = True
+            t_done = dt
             break
 
         remaining = dt - t_done
 
         if max_loss * remaining < skip_dtl:
+            diag["coag_terminated_negligible"] = True
+            t_done = dt
             break
 
         dt_sub = min(remaining, substep_frac / max(max_loss, 1e-300))
@@ -2860,8 +2934,7 @@ def coagulation_step(n_in, dt, ctx):
     if not np.isfinite(diag["coag_min_sub_dt"]):
         diag["coag_min_sub_dt"] = 0.0
 
-    if t_done < 0.999 * dt:
-        diag["coag_hit_substep_cap"] = True
+
 
     return np.maximum(n, 0.0), diag
 

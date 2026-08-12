@@ -518,15 +518,11 @@ def _select_radius_matrix_cm(ctx: dict[str, Any], optics_mode: str) -> np.ndarra
                 "ctx['r_fractal_layer_cm'] must have shape (nz, n_bin)."
             )
 
-        can_be_aggregate = np.asarray(
-            ctx.get("can_be_aggregate", np.zeros(n_bin, dtype=bool)),
-            dtype=bool,
-        )
-
-        w_agg_layer = np.asarray(ctx.get("w_agg_layer", np.zeros(nz)), dtype=float)
-        w_agg_matrix = np.clip(w_agg_layer[:, None], 0.0, 1.0) * can_be_aggregate[None, :]
-
-        return (1.0 - w_agg_matrix) * r_compact_cm[None, :] + w_agg_matrix * r_fractal
+        # r_fractal_layer_cm already includes the pressure-dependent
+        # compact-to-aggregate transition through Df_layer. Do not blend
+        # toward the compact radius a second time here, or the optical
+        # radius becomes inconsistent with rho_eff_layer.
+        return r_fractal
 
     if optics_mode == "aggregate_table":
         raise NotImplementedError(
